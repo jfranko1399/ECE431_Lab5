@@ -4,6 +4,8 @@
 #include <math.h>
 #include <limits.h>
 
+#define ITERATIONS 30
+
 void add_contour(unsigned char *image, int cols, int rows, int *col_loc, int *row_loc, int length, int name);
 
 #define SQR(x) ((x)*(x))
@@ -23,7 +25,7 @@ int main(int argc, char *argv[])
   char header[20];
   int ROWS, COLS, BYTES;
   int contours, r, c, i, j, k, l, sumx, sumy, max, min, oldRange;
-  float distance;
+  float averageDis, *firstInternalEnergy, *secondInternalEnergy, *externalEnergy;
   char ch;
 
   if (argc != 3)
@@ -150,21 +152,37 @@ int main(int argc, char *argv[])
   // fwrite(normal_image, COLS * ROWS, 1, normal_ppm);
   // fclose(normal_ppm);
 
-  for (i = 0; i < 31; i++)
+  firstInternalEnergy = (float *)calloc(49, sizeof(float));
+  secondInternalEnergy = (float *)calloc(49, sizeof(float));
+  externalEnergy = (float *)calloc(49, sizeof(float));
+
+  for (i = 0; i < ITERATIONS; i++)
   {
-    distance = 0.0;
+    averageDis = 0.0;
     for (j = 0; j < contours - 1; j++)
     {
-      distance += sqrt(SQR(init_rows[j] - init_rows[j + 1]) + SQR(init_cols[i] - init_rows[i + 1]));
+      averageDis += sqrt(SQR(init_rows[j] - init_rows[j + 1]) + SQR(init_cols[j] - init_rows[j + 1]));
     }
 
-    distance += sqrt(SQR(init_rows[j] - init_rows[0]) + SQR(init_cols[i] - init_rows[0]));
-    distance /= contours;
+    averageDis += sqrt(SQR(init_rows[j] - init_rows[0]) + SQR(init_cols[j] - init_rows[0]));
+    averageDis /= contours;
 
-    for (j = 0; j < contours; j++)
+    for (j = 0; j < contours - 1; j++)
     {
-
+      for (r = -3; r < 4; r++)
+      {
+        for (c = -3; c < 4; c++)
+        {
+          firstInternalEnergy[(r + 3) * 7 + (c + 3)] = SQR((init_rows[j] + r) - init_rows[j + 1]) + SQR((init_cols[j] + c) - init_rows[j + 1]);
+          secondInternalEnergy[(r + 3) * 7 + (c + 3)] = SQR(averageDis - sqrt(firstInternalEnergy));
+          externalEnergy[(r + 3) * 7 + (c + 3)] = SQR(255 - sobel[(init_rows[j] + r) * COLS + (init_cols[j] + c)]);
+        }
+      }
     }
+
+    firstInternalEnergy[(r + 3) * 7 + (c + 3)] = SQR((init_rows[j] + r) - init_rows[0]) + SQR((init_cols[j] + c) - init_rows[0]);
+    secondInternalEnergy[(r + 3) * 7 + (c + 3)] = SQR(averageDis - sqrt(firstInternalEnergy));
+    externalEnergy[(r + 3) * 7 + (c + 3)] = SQR(255 - sobel[(init_rows[j] + r) * COLS + (init_cols[j] + c)]);
   }
 }
 
