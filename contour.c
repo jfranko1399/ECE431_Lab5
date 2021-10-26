@@ -223,7 +223,7 @@ int main(int argc, char *argv[])
         for (k = -3; k < 4; k++)
         {
           //printf("%f %f %f %f %d %d\n", normalFirst[(l + 3) * 7 + (k + 3)], normalSecond[(l + 3) * 7 + (k + 3)], normalExternal[(l + 3) * 7 + (k + 3)], minf, c, r);
-          sumEnergy[(l + 3) * 7 + (k + 3)] = 2 * normalFirst[(l + 3) * 7 + (k + 3)] + normalSecond[(l + 3) * 7 + (k + 3)] + normalExternal[(l + 3) * 7 + (k + 3)];
+          sumEnergy[(l + 3) * 7 + (k + 3)] = 3 * (normalFirst[(l + 3) * 7 + (k + 3)] + normalSecond[(l + 3) * 7 + (k + 3)]) + (2 * normalExternal[(l + 3) * 7 + (k + 3)]);
           if (sumEnergy[(l + 3) * 7 + (k + 3)] < minf)
           {
             minf = sumEnergy[(l + 3) * 7 + (k + 3)];
@@ -273,7 +273,7 @@ void add_contour(unsigned char *image, int cols, int rows, int *col_loc, int *ro
     output[i] = image[i];
   }
 
-  for (i = 0; i < length - 1; i++)
+  for (i = 0; i < length; i++)
   {
     for (j = -3; j < 4; j++)
     {
