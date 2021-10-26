@@ -5,8 +5,6 @@
 #include <limits.h>
 #include <float.h>
 
-#define ITERATIONS 30
-
 void add_contour(unsigned char *image, int cols, int rows, int *col_loc, int *row_loc, int length, int name);
 float *normalize_energy(float *energy);
 
@@ -19,11 +17,12 @@ int main(int argc, char *argv[])
   FILE *fpt2;
   FILE *sobel_ppm;
   FILE *normal_ppm;
+  FILE *final;
   unsigned char *image;
   unsigned char *initial;
-  unsigned char *sobel;
+  int *sobel;
   unsigned char *normal_image;
-  int *init_cols, *init_rows, *final_cols, *final_rows;
+  int *init_cols, *init_rows, *add_cols, *add_rows;
   char header[20];
   int ROWS, COLS, BYTES;
   int contours, r, c, i, j, k, l, sumx, sumy, index;
@@ -92,7 +91,7 @@ int main(int argc, char *argv[])
 
   add_contour(image, COLS, ROWS, init_cols, init_rows, contours, 0);
 
-  sobel = (unsigned char *)calloc(ROWS * COLS, sizeof(unsigned char));
+  sobel = (int *)calloc(ROWS * COLS, sizeof(int));
 
   int sobelx[] = {-1, 0, 1, -2, 0, 2, -1, 0, 1};
   int sobely[] = {-1, -2, -1, 0, 0, 0, 1, 2, 1};
@@ -121,35 +120,35 @@ int main(int argc, char *argv[])
   // fwrite(sobel, COLS * ROWS, 1, sobel_ppm);
   // fclose(sobel_ppm);
 
-  max = 0;
-  min = INT_MAX;
+  // max = 0;
+  // min = INT_MAX;
 
   /* find the old maximum and minimum pixel values */
-  for (r = 0; r < ROWS; r++)
-  {
-    for (c = 0; c < COLS; c++)
-    {
-      if (sobel[r * COLS + c] > max)
-      {
-        max = sobel[r * COLS + c];
-      }
-      if (sobel[r * COLS + c] < min)
-      {
-        min = sobel[r * COLS + c];
-      }
-    }
-  }
+  // for (r = 0; r < ROWS; r++)
+  // {
+  //   for (c = 0; c < COLS; c++)
+  //   {
+  //     if (sobel[r * COLS + c] > max)
+  //     {
+  //       max = sobel[r * COLS + c];
+  //     }
+  //     if (sobel[r * COLS + c] < min)
+  //     {
+  //       min = sobel[r * COLS + c];
+  //     }
+  //   }
+  // }
 
   /* determine the old range of pixel values */
-  oldRange = max - min;
+  //oldRange = max - min;
 
-  normal_image = (unsigned char *)calloc(ROWS * COLS, sizeof(unsigned char));
-
-  /* map all old pixels to new range of 0-255 */
-  for (i = 0; i < ROWS * COLS; i++)
-  {
-    normal_image[i] = (((sobel[i] - min) * 255) / oldRange);
-  }
+  // normal_image = (unsigned char *)calloc(ROWS * COLS, sizeof(unsigned char));
+  //
+  // /* map all old pixels to new range of 0-255 */
+  // for (i = 0; i < ROWS * COLS; i++)
+  // {
+  //   normal_image[i] = (((sobel[i] - min) * 255) / oldRange);
+  // }
 
   /* write out normalized image to see result */
   // normal_ppm = fopen("normal.ppm", "w");
@@ -167,10 +166,11 @@ int main(int argc, char *argv[])
 
   sumEnergy = (float *)calloc(49, sizeof(float));
 
-  final_cols = (int *)calloc(contours, sizeof(int));
-  final_rows = (int *)calloc(contours, sizeof(int));
+  add_cols = (int *)calloc(contours, sizeof(int));
+  add_rows = (int *)calloc(contours, sizeof(int));
 
-  for (i = 0; i < ITERATIONS; i++)
+  i = 0;
+  while (i < 30)
   {
     averageDis = 0.0;
     for (j = 0; j < contours - 1; j++)
@@ -182,52 +182,80 @@ int main(int argc, char *argv[])
     averageDis /= contours;
     //printf("%f\n", averageDis);
 
-    for (j = 0; j < contours - 1; j++)
+    for (j = 0; j < contours; j++)
     {
       for (r = -3; r < 4; r++)
       {
         for (c = -3; c < 4; c++)
         {
-          firstInternalEnergy[(r + 3) * 7 + (c + 3)] = SQR((init_rows[j] + r) - init_rows[j + 1]) + SQR((init_cols[j] + c) - init_cols[j + 1]);
-          secondInternalEnergy[(r + 3) * 7 + (c + 3)] = SQR(averageDis - sqrt(firstInternalEnergy[(r + 3) * 7 + (c + 3)]));
-          externalEnergy[(r + 3) * 7 + (c + 3)] = SQR(255 - sobel[(init_rows[j] + r) * COLS + (init_cols[j] + c)]);
+          if ((j + 1) != contours)
+          {
+            firstInternalEnergy[(r + 3) * 7 + (c + 3)] = SQR((init_rows[j] + r) - init_rows[j + 1]) + SQR((init_cols[j] + c) - init_cols[j + 1]);
+            secondInternalEnergy[(r + 3) * 7 + (c + 3)] = SQR(averageDis - sqrt(firstInternalEnergy[(r + 3) * 7 + (c + 3)]));
+            externalEnergy[(r + 3) * 7 + (c + 3)] = SQR(255 - sobel[(init_rows[j] + r) * COLS + (init_cols[j] + c)]);
+          }
+          else
+          {
+            firstInternalEnergy[(r + 3) * 7 + (c + 3)] = SQR((init_rows[j] + r) - init_rows[0]) + SQR((init_cols[j] + c) - init_cols[0]);
+            secondInternalEnergy[(r + 3) * 7 + (c + 3)] = SQR(averageDis - sqrt(firstInternalEnergy[(r + 3) * 7 + (c + 3)]));
+            externalEnergy[(r + 3) * 7 + (c + 3)] = SQR(255 - sobel[(init_rows[j] + r) * COLS + (init_cols[j] + c)]);
+          }
         }
       }
-    }
 
-    firstInternalEnergy[(r + 3) * 7 + (c + 3)] = SQR((init_rows[j] + r) - init_rows[0]) + SQR((init_cols[j] + c) - init_cols[0]);
-    secondInternalEnergy[(r + 3) * 7 + (c + 3)] = SQR(averageDis - sqrt(firstInternalEnergy[(r + 3) * 7 + (c + 3)]));
-    externalEnergy[(r + 3) * 7 + (c + 3)] = SQR(255 - sobel[(init_rows[j] + r) * COLS + (init_cols[j] + c)]);
+
+    // firstInternalEnergy[(r + 3) * 7 + (c + 3)] = SQR((init_rows[j] + r) - init_rows[0]) + SQR((init_cols[j] + c) - init_cols[0]);
+    // secondInternalEnergy[(r + 3) * 7 + (c + 3)] = SQR(averageDis - sqrt(firstInternalEnergy[(r + 3) * 7 + (c + 3)]));
+    // externalEnergy[(r + 3) * 7 + (c + 3)] = SQR(255 - sobel[(init_rows[j] + r) + (init_cols[j] + c)]);
 
     normalFirst = normalize_energy(firstInternalEnergy);
     normalSecond = normalize_energy(secondInternalEnergy);
     normalExternal = normalize_energy(externalEnergy);
 
-    minf = FLT_MAX;
+    //l = 0;
+    //while (l < contours)
+    //{
+      minf = FLT_MAX;
+      r = c = 0;
 
-    for (j = 0; j < 7; j++)
-    {
-      for (k = 0; k < 7; k++)
+      for (l = -3; l < 4; l++)
       {
-        printf("%f %f %f %f\n", normalFirst[j * 7 + k], normalSecond[j * 7 + k], normalExternal[j * 7 + k], minf);
-        sumEnergy[j * 7 + k] = normalFirst[j * 7 + k] + normalSecond[j * 7 + k] + normalExternal[j * 7 + k];
-        if (sumEnergy[j * 7 + k] < minf)
+        for (k = -3; k < 4; k++)
         {
-          minf = sumEnergy[j * 7 + k];
-          r = j;
-          c = k;
+          //printf("%f %f %f %f %d %d\n", normalFirst[(l + 3) * 7 + (k + 3)], normalSecond[(l + 3) * 7 + (k + 3)], normalExternal[(l + 3) * 7 + (k + 3)], minf, c, r);
+          sumEnergy[(l + 3) * 7 + (k + 3)] = 2 * normalFirst[(l + 3) * 7 + (k + 3)] + normalSecond[(l + 3) * 7 + (k + 3)] + normalExternal[(l + 3) * 7 + (k + 3)];
+          if (sumEnergy[(l + 3) * 7 + (k + 3)] < minf)
+          {
+            minf = sumEnergy[(l + 3) * 7 + (k + 3)];
+            add_rows[j] = l;
+            add_cols[j] = k;
+          }
         }
       }
+
+      //l++;
     }
 
     for (j = 0; j < contours; j++)
     {
       //printf("%d %d %d %d\n", init_cols[j], init_rows[j], c, r);
-      init_cols[j] = init_cols[j] + c;
-      init_rows[j] = init_rows[j] + r;
+      init_cols[j] = init_cols[j] + add_cols[j];
+      init_rows[j] = init_rows[j] + add_rows[j];
     }
+
+    i++;
   }
 
+  i = 0;
+  final = fopen("hawk_final.csv", "w");
+  while (i < contours)
+  {
+    fprintf(final, "%d,%d\n", init_cols[i], init_rows[i]);
+    i++;
+  }
+  fclose(final);
+
+  //printf("DONEEEEE\n");
   add_contour(image, COLS, ROWS, init_cols, init_rows, contours, 1);
 }
 
