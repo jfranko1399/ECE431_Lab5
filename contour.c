@@ -107,6 +107,41 @@ int main(int argc, char *argv[])
     }
   }
 
+  max = 0;
+  min = INT_MAX;
+
+  /* find the old maximum and minimum pixel values */
+  for (r = 0; r < ROWS; r++)
+  {
+    for (c = 0; c < COLS; c++)
+    {
+      if (sobel[r * COLS + c] > max)
+      {
+        max = sobel[r * COLS + c];
+      }
+      if (sobel[r * COLS + c] < min)
+      {
+        min = sobel[r * COLS + c];
+      }
+    }
+  }
+
+  /* determine the old range of pixel values */
+  oldRange = max - min;
+
+  normal_image = (float *)calloc(49, sizeof(float));
+
+  /* map all old pixels to new range of 0-255 */
+  for (i = 0; i < 49; i++)
+  {
+    normal_image[i] = (((sobel[i] - min) * 1) / oldRange);
+  }
+
+  normal_ppm = fopen("normal.ppm", "w");
+  fprintf(normal_ppm, "P5 %d %d 255\n", cols, rows);
+  fwrite(normal_image, cols * rows, 1, normal_ppm);
+  fclose(normal_ppm);
+
   firstInternalEnergy = (float *)calloc(49, sizeof(float));
   secondInternalEnergy = (float *)calloc(49, sizeof(float));
   externalEnergy = (float *)calloc(49, sizeof(float));
